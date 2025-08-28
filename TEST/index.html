@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TrackingMore SDK Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f6f9;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    section {
+      background: #fff;
+      padding: 15px 20px;
+      margin: 20px auto;
+      max-width: 600px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    h2 {
+      font-size: 18px;
+      color: #34495e;
+      margin-bottom: 10px;
+    }
+    input {
+      padding: 8px;
+      margin: 5px 5px 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: calc(100% - 20px);
+      display: block;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    pre {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h1>📦 TrackingMore SDK Demo</h1>
+
+  <section>
+    <h2>Create Tracking</h2>
+    <input id="ct_num" placeholder="Tracking Number">
+    <input id="ct_courier" placeholder="Courier Code (e.g. fedex)">
+    <button onclick="createT()">Create Tracking</button>
+    <pre id="ct_res"></pre>
+  </section>
+<!-- 
+  <section>
+    <h2>Get Multiple Trackings</h2>
+    <input id="gt_nums" placeholder="Comma-separated Tracking Numbers (e.g. 771066256450,LX123456789CN)">
+    <button onclick="getT()">Get Trackings</button>
+    <pre id="gt_res"></pre>
+  </section> -->
+
+  <section>
+    <h2>Detect Courier</h2>
+    <input id="dc_num" placeholder="Tracking Number">
+    <button onclick="detectC()">Detect Courier</button>
+    <pre id="dc_res"></pre>
+  </section>
+
+  <!-- <section>
+    <h2>All Couriers</h2>
+    <button onclick="listC()">List Couriers</button>
+    <pre id="lc_res"></pre>
+  </section> -->
+
+  <script>
+    async function createT() {
+      const num = document.getElementById("ct_num").value;
+      const courier = document.getElementById("ct_courier").value;
+      const res = await fetch("/trackings/create", {
+        method: "POST",
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({tracking_number: num, courier_code: courier})
+      });
+      document.getElementById("ct_res").textContent = JSON.stringify(await res.json(), null, 2);
+    }
+
+    async function getT() {
+      const nums = document.getElementById("gt_nums").value.split(',');
+      const query = nums.map(n => `tracking_numbers=${n.trim()}`).join('&');
+      const res = await fetch(`/trackings?${query}`);
+      document.getElementById("gt_res").textContent = JSON.stringify(await res.json(), null, 2);
+    }
+
+   async function detectC() {
+    const num = document.getElementById("dc_num").value;
+
+    try {
+      const res = await fetch("/couriers/detect", {   // <-- matches Flask route
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tracking_number: num })
+      });
+
+      const data = await res.json();
+      document.getElementById("dc_res").textContent =
+        JSON.stringify(data, null, 2);
+    } catch (err) {
+      document.getElementById("dc_res").textContent = "Error: " + err;
+    }
+  }
+
+    async function listC() {
+      const res = await fetch('/couriers');
+      document.getElementById("lc_res").textContent = JSON.stringify(await res.json(), null, 2);
+    }
+  </script>
+</body>
+</html>
