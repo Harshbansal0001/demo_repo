@@ -51,10 +51,6 @@ def tm_headers() -> Dict[str, str]:
         "Tracking-Api-Key": API_KEY,
     }
 
-
-# -------------------
-# Routes
-# -------------------
 @app.post("/trackings/create")
 def create_tracking(req: CreateTrackingRequest, db: Session = Depends(get_db)):
     payload: Dict[str, Any] = req.dict(exclude_none=True)
