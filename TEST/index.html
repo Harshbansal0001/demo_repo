@@ -62,45 +62,52 @@
 <body>
   <h1>📦 TrackingMore SDK Demo</h1>
 
-  <section>
-    <h2>Create Tracking</h2>
-    <input id="ct_num" placeholder="Tracking Number">
-    <input id="ct_courier" placeholder="Courier Code (e.g. fedex)">
-    <button onclick="createT()">Create Tracking</button>
-    <pre id="ct_res"></pre>
-  </section>
-<!-- 
-  <section>
-    <h2>Get Multiple Trackings</h2>
-    <input id="gt_nums" placeholder="Comma-separated Tracking Numbers (e.g. 771066256450,LX123456789CN)">
-    <button onclick="getT()">Get Trackings</button>
-    <pre id="gt_res"></pre>
-  </section> -->
+ <section>
+  <h2>Create Tracking</h2>
+  <input id="ct_num" placeholder="Tracking Number">
+  <input id="ct_courier" placeholder="Courier Code (e.g. fedex)">
+  <input id="ct_dispatch" type="date" placeholder="Date of Dispatch">
+  <input id="ct_type" placeholder="Type (softcopy/hardcopy)">
+  <input id="ct_note" placeholder="Note (optional)">
 
-  <section>
+  <button onclick="createT()">Create Tracking</button>
+  <pre id="ct_res"></pre>
+</section>
+
+
+
+   <section>
     <h2>Detect Courier</h2>
     <input id="dc_num" placeholder="Tracking Number">
+    <input id="dc_courier" placeholder="Courier Code (optional)">
     <button onclick="detectC()">Detect Courier</button>
     <pre id="dc_res"></pre>
   </section>
 
-  <!-- <section>
-    <h2>All Couriers</h2>
-    <button onclick="listC()">List Couriers</button>
-    <pre id="lc_res"></pre>
-  </section> -->
+
+ 
 
   <script>
-    async function createT() {
-      const num = document.getElementById("ct_num").value;
-      const courier = document.getElementById("ct_courier").value;
-      const res = await fetch("/trackings/create", {
-        method: "POST",
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({tracking_number: num, courier_code: courier})
-      });
-      document.getElementById("ct_res").textContent = JSON.stringify(await res.json(), null, 2);
-    }
+   async function createT() {
+  const num = document.getElementById("ct_num").value;
+  const courier = document.getElementById("ct_courier").value;
+  const note = document.getElementById("ct_note").value;
+
+  const res = await fetch("/trackings/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      tracking_number: num,
+      courier_code: courier,
+      note: note
+    })
+  });
+
+  document.getElementById("ct_res").textContent =
+    JSON.stringify(await res.json(), null, 2);
+}
+
+
 
     async function getT() {
       const nums = document.getElementById("gt_nums").value.split(',');
@@ -109,23 +116,48 @@
       document.getElementById("gt_res").textContent = JSON.stringify(await res.json(), null, 2);
     }
 
-   async function detectC() {
-    const num = document.getElementById("dc_num").value;
+  //  async function detectC() {
+  //   const num = document.getElementById("dc_num").value;
 
-    try {
-      const res = await fetch("/couriers/detect", {   // <-- matches Flask route
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tracking_number: num })
-      });
+  //   try {
+  //     const res = await fetch("/couriers/detect", {   // <-- matches Flask route
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ tracking_number: num })
+  //     });
 
-      const data = await res.json();
-      document.getElementById("dc_res").textContent =
-        JSON.stringify(data, null, 2);
-    } catch (err) {
-      document.getElementById("dc_res").textContent = "Error: " + err;
-    }
+  //     const data = await res.json();
+  //     document.getElementById("dc_res").textContent =
+  //       JSON.stringify(data, null, 2);
+  //   } catch (err) {
+  //     document.getElementById("dc_res").textContent = "Error: " + err;
+  //   }
+  // }
+
+
+async function detectC() {
+  const num = document.getElementById("dc_num").value;
+  const courier = document.getElementById("dc_courier").value;
+
+  try {
+    const res = await fetch("/couriers/detect",{
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tracking_number: num,
+        courier_code: courier || undefined   // send only if filled
+      })
+    });
+
+    const data = await res.json();
+    document.getElementById("dc_res").textContent =
+      JSON.stringify(data, null, 2);
+  } catch (err) {
+    document.getElementById("dc_res").textContent = "Error: " + err;
   }
+}
+
+
 
     async function listC() {
       const res = await fetch('/couriers');
