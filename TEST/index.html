@@ -47,6 +47,10 @@
     button:hover {
       background: #2980b9;
     }
+    button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
     pre {
       background: #f9f9f9;
       border: 1px solid #ddd;
@@ -57,112 +61,201 @@
       white-space: pre-wrap;
       word-break: break-word;
     }
+    .loading {
+      color: #3498db;
+      font-style: italic;
+    }
+    .error {
+      color: #e74c3c;
+      background: #fdf2f2;
+      border: 1px solid #fecaca;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .success {
+      color: #27ae60;
+      background: #f0fff4;
+      border: 1px solid #9ae6b4;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
   <h1>📦 TrackingMore SDK Demo</h1>
 
- <section>
-  <h2>Create Tracking</h2>
-  <input id="ct_num" placeholder="Tracking Number">
-  <input id="ct_courier" placeholder="Courier Code (e.g. fedex)">
-  <input id="ct_dispatch" type="date" placeholder="Date of Dispatch">
-  <input id="ct_type" placeholder="Type (softcopy/hardcopy)">
-  <input id="ct_note" placeholder="Note (optional)">
+  <section>
+    <h2>Create Tracking</h2>
+    <input id="ct_num" placeholder="Tracking Number (e.g., 1234567890)">
+    <input id="ct_courier" placeholder="Courier Code (e.g., fedex, ups, dhl)">
+    <input id="ct_dispatch" type="date" placeholder="Date of Dispatch">
+    <input id="ct_type" placeholder="Type (softcopy/hardcopy)">
+    <input id="ct_note" placeholder="Note (optional)">
+    <button onclick="createT()">Create Tracking</button>
+    <pre id="ct_res"></pre>
+  </section>
 
-  <button onclick="createT()">Create Tracking</button>
-  <pre id="ct_res"></pre>
-</section>
-
-
-
-   <section>
-    <h2>Detect Courier</h2>
-    <input id="dc_num" placeholder="Tracking Number">
-    <input id="dc_courier" placeholder="Courier Code (optional)">
-    <button onclick="detectC()">Detect Courier</button>
+  <section>
+    <h2>Detect Courier & Get Tracking</h2>
+    <input id="dc_num" placeholder="Tracking Number (e.g., 1234567890)">
+    <input id="dc_courier" placeholder="Courier Code (optional - leave blank for auto-detect)">
+    <button onclick="detectC()">Detect Courier & Track</button>
     <pre id="dc_res"></pre>
   </section>
 
+  <section>
+    <h2>Get All Trackings</h2>
+    <input id="gt_nums" placeholder="Tracking Numbers (comma-separated, optional)">
+    <button onclick="getT()">Get Trackings</button>
+    <pre id="gt_res"></pre>
+  </section>
 
- 
+  <section>
+    <h2>List All Couriers</h2>
+    <button onclick="listC()">List Couriers</button>
+    <pre id="lc_res"></pre>
+  </section>
 
   <script>
-   async function createT() {
-  const num = document.getElementById("ct_num").value;
-  const courier = document.getElementById("ct_courier").value;
-  const note = document.getElementById("ct_note").value;
+    // Utility function to show loading state
+    function showLoading(elementId) {
+      document.getElementById(elementId).innerHTML = '<span class="loading">Loading...</span>';
+    }
 
-  const res = await fetch("/trackings/create", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      tracking_number: num,
-      courier_code: courier,
-      note: note
-    })
-  });
+    // Utility function to show error
+    function showError(elementId, error) {
+      document.getElementById(elementId).innerHTML = 
+        `<div class="error">Error: ${error}</div>`;
+    }
 
-  document.getElementById("ct_res").textContent =
-    JSON.stringify(await res.json(), null, 2);
-}
+    // Utility function to show success
+    function showSuccess(elementId, data) {
+      document.getElementById(elementId).innerHTML = 
+        `<div class="success">Success!</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+    }
 
+    async function createT() {
+      const num = document.getElementById("ct_num").value.trim();
+      const courier = document.getElementById("ct_courier").value.trim();
+      const dispatch = document.getElementById("ct_dispatch").value;
+      const type = document.getElementById("ct_type").value.trim();
+      const note = document.getElementById("ct_note").value.trim();
 
+      if (!num || !courier) {
+        showError("ct_res", "Tracking number and courier code are required");
+        return;
+      }
+
+      showLoading("ct_res");
+
+      try {
+        const payload = {
+          tracking_number: num,
+          courier_code: courier
+        };
+
+        if (dispatch) payload.dispatch_date = dispatch;
+        if (type) payload.type = type;
+        if (note) payload.note = note;
+
+        const res = await fetch("/trackings/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        
+        if (res.ok) {
+          showSuccess("ct_res", data);
+        } else {
+          showError("ct_res", data.detail || "Failed to create tracking");
+        }
+      } catch (err) {
+        showError("ct_res", err.message);
+      }
+    }
+
+    async function detectC() {
+      const num = document.getElementById("dc_num").value.trim();
+      const courier = document.getElementById("dc_courier").value.trim();
+
+      if (!num) {
+        showError("dc_res", "Tracking number is required");
+        return;
+      }
+
+      showLoading("dc_res");
+
+      try {
+        const payload = { tracking_number: num };
+        if (courier) payload.courier_code = courier;
+
+        const res = await fetch("/couriers/detect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        
+        if (res.ok) {
+          showSuccess("dc_res", data);
+        } else {
+          showError("dc_res", data.detail || "Failed to detect courier or get tracking");
+        }
+      } catch (err) {
+        showError("dc_res", err.message);
+      }
+    }
 
     async function getT() {
-      const nums = document.getElementById("gt_nums").value.split(',');
-      const query = nums.map(n => `tracking_numbers=${n.trim()}`).join('&');
-      const res = await fetch(`/trackings?${query}`);
-      document.getElementById("gt_res").textContent = JSON.stringify(await res.json(), null, 2);
+      const nums = document.getElementById("gt_nums").value.trim();
+      
+      showLoading("gt_res");
+
+      try {
+        let url = "/trackings";
+        if (nums) {
+          const trackingNumbers = nums.split(',').map(n => n.trim()).filter(n => n);
+          const query = trackingNumbers.map(n => `tracking_numbers=${encodeURIComponent(n)}`).join('&');
+          url += `?${query}`;
+        }
+
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (res.ok) {
+          showSuccess("gt_res", data);
+        } else {
+          showError("gt_res", data.detail || "Failed to get trackings");
+        }
+      } catch (err) {
+        showError("gt_res", err.message);
+      }
     }
-
-  //  async function detectC() {
-  //   const num = document.getElementById("dc_num").value;
-
-  //   try {
-  //     const res = await fetch("/couriers/detect", {   // <-- matches Flask route
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ tracking_number: num })
-  //     });
-
-  //     const data = await res.json();
-  //     document.getElementById("dc_res").textContent =
-  //       JSON.stringify(data, null, 2);
-  //   } catch (err) {
-  //     document.getElementById("dc_res").textContent = "Error: " + err;
-  //   }
-  // }
-
-
-async function detectC() {
-  const num = document.getElementById("dc_num").value;
-  const courier = document.getElementById("dc_courier").value;
-
-  try {
-    const res = await fetch("/couriers/detect",{
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tracking_number: num,
-        courier_code: courier || undefined   // send only if filled
-      })
-    });
-
-    const data = await res.json();
-    document.getElementById("dc_res").textContent =
-      JSON.stringify(data, null, 2);
-  } catch (err) {
-    document.getElementById("dc_res").textContent = "Error: " + err;
-  }
-}
-
-
 
     async function listC() {
-      const res = await fetch('/couriers');
-      document.getElementById("lc_res").textContent = JSON.stringify(await res.json(), null, 2);
+      showLoading("lc_res");
+
+      try {
+        const res = await fetch('/couriers');
+        const data = await res.json();
+        
+        if (res.ok) {
+          showSuccess("lc_res", data);
+        } else {
+          showError("lc_res", data.detail || "Failed to list couriers");
+        }
+      } catch (err) {
+        showError("lc_res", err.message);
+      }
     }
+
+    // Auto-fill current date for dispatch date field
+    document.getElementById("ct_dispatch").value = new Date().toISOString().split('T')[0];
   </script>
 </body>
 </html>
